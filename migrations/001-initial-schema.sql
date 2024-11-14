@@ -5,6 +5,13 @@ CREATE TABLE messages(
   content TEXT
 );
 
+CREATE TABLE users(
+  id INTEGER PRIMARY KEY,
+  username TEXT,
+  passwordHash TEXT
+);
+
 -- Down
 
 DROP TABLE messages;
+DROP TABLE users;
