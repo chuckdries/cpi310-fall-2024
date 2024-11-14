@@ -1,0 +1,14 @@
+<h1>hello world</h1>
+
+<div>
+  {{#each messages}}
+  <div>{{content}}</div>
+  {{/each}}
+</div>
+
+<form method="post" action="/message">
+  <label>Message: 
+    <input type="text" name="message" />
+  </label>
+  <button type="submit">send</button>
+</form>
