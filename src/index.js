@@ -20,6 +20,7 @@ app.set("view engine", "handlebars");
 app.set("views", "./views");
 app.use(express.urlencoded());
 app.use(cookieParser());
+app.use("/public", express.static("./public"));
 
 app.use(async (req, res, next) => {
   const authToken = req.cookies.authToken;
@@ -51,16 +52,24 @@ app.post("/register", async (req, res) => {
   if (req.user) {
     return res.redirect("/");
   }
-  // TODO: validate input
+  if (!req.body.username || !req.body.password) {
+    return res.render("register", { error: "missing required field" });
+  }
   const passwordHash = await bcrypt.hash(req.body.password, saltRounds);
-  const userInsertResult = await db.run(
-    "INSERT INTO users (username, passwordHash) VALUES (?, ?);",
-    req.body.username,
-    passwordHash
-  );
+  let userInsertResult;
+  try {
+    userInsertResult = await db.run(
+      "INSERT INTO users (username, passwordHash) VALUES (?, ?);",
+      req.body.username,
+      passwordHash
+    );
+  } catch (e) {
+    if (e.errno === 19) {
+      return res.render("register", { error: "Username already taken"});
+    }
+    return res.render("register", { error: "Something went wrong. Try again later" })
+  }
 
-  // TODO: handle db failures (username taken)
-  // TODO: issue access token
   const token = uuidv4();
   await db.run(
     "INSERT INTO authTokens (token, userId) VALUES (?, ?);",
@@ -91,14 +100,14 @@ app.post("/login", async (req, res) => {
     req.body.username
   );
   if (!maybeUser) {
-    return res.render("login");
+    return res.render("login", { error: "Incorrect username or password" });
   }
   const passwordMatches = await bcrypt.compare(
     req.body.password,
     maybeUser.passwordHash
   );
   if (!passwordMatches) {
-    return res.render("login");
+    return res.render("login", { error: "Incorrect username or password" });
   }
   const token = uuidv4();
   await db.run(
@@ -115,7 +124,11 @@ app.post("/login", async (req, res) => {
 });
 
 app.post("/message", async (req, res) => {
-  console.log(req.body);
+  if (!req.user) {
+    res.status(401)
+    res.send('Unauthorized')
+    return;
+  }
   await db.run(
     "INSERT INTO messages (content, authorId) VALUES (?, ?);",
     req.body.message,
