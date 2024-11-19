@@ -3,6 +3,8 @@ import { engine } from "express-handlebars";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import bcrypt from "bcrypt";
+import { v4 as uuidv4 } from "uuid";
+import cookieParser from "cookie-parser";
 
 const saltRounds = 10;
 const app = express();
@@ -17,28 +19,94 @@ app.engine("handlebars", engine());
 app.set("view engine", "handlebars");
 app.set("views", "./views");
 app.use(express.urlencoded());
+app.use(cookieParser());
+
+app.use(async (req, res, next) => {
+  const authToken = req.cookies.authToken;
+  if (!authToken) {
+    next();
+    return;
+  }
+  const maybeUser = await db.get(
+    "SELECT users.username, users.id FROM authTokens INNER JOIN users ON users.id = authTokens.userId WHERE token = ?;",
+    authToken
+  );
+  req.user = maybeUser;
+  next();
+});
 
 app.get("/", async (req, res) => {
   const messages = await db.all("SELECT * FROM messages;");
-  res.render("home", { messages });
+  res.render("home", { messages, user: req.user });
 });
 
 app.get("/register", (req, res) => {
+  if (req.user) {
+    return res.redirect('/')
+  }
   res.render("register");
 });
 
 app.post("/register", async (req, res) => {
+  if (req.user) {
+    return res.redirect('/')
+  }
   // TODO: validate input
   const passwordHash = await bcrypt.hash(req.body.password, saltRounds);
-  await db.run(
+  const userInsertResult = await db.run(
     "INSERT INTO users (username, passwordHash) VALUES (?, ?);",
     req.body.username,
     passwordHash
   );
+
   // TODO: handle db failures (username taken)
   // TODO: issue access token
-  res.redirect('/')
+  const token = uuidv4();
+  await db.run(
+    "INSERT INTO authTokens (token, userId) VALUES (?, ?);",
+    token,
+    userInsertResult.lastID
+  );
+  const expirationDate = new Date();
+  expirationDate.setFullYear(2050);
+  res.cookie("authToken", token, {
+    expires: expirationDate,
+  });
+  res.redirect("/");
 });
+
+app.get('/login', (req, res) => {
+  if (req.user) {
+    return res.redirect('/')
+  }
+  res.render('login');
+});
+
+app.post('/login', async (req, res) => {
+  if (req.user) {
+    return res.redirect('/')
+  }
+  const maybeUser = await db.get("SELECT * FROM users WHERE username = ?;", req.body.username);
+  if (!maybeUser) {
+    return res.render('login');
+  }
+  const passwordMatches = await bcrypt.compare(req.body.password, maybeUser.passwordHash);
+  if (!passwordMatches) {
+    return res.render('login');
+  }
+  const token = uuidv4();
+  await db.run(
+    "INSERT INTO authTokens (token, userId) VALUES (?, ?);",
+    token,
+    maybeUser.id
+  );
+  const expirationDate = new Date();
+  expirationDate.setFullYear(2050);
+  res.cookie("authToken", token, {
+    expires: expirationDate,
+  });
+  res.redirect("/");
+})
 
 app.post("/message", async (req, res) => {
   console.log(req.body);
@@ -47,7 +115,7 @@ app.post("/message", async (req, res) => {
 });
 
 async function setup() {
-  await db.migrate();
+  await db.migrate({ force: false });
   app.listen(8080, () => {
     console.log("listening on http://localhost:8080");
   });
