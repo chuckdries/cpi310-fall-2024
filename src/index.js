@@ -42,14 +42,14 @@ app.get("/", async (req, res) => {
 
 app.get("/register", (req, res) => {
   if (req.user) {
-    return res.redirect('/')
+    return res.redirect("/");
   }
   res.render("register");
 });
 
 app.post("/register", async (req, res) => {
   if (req.user) {
-    return res.redirect('/')
+    return res.redirect("/");
   }
   // TODO: validate input
   const passwordHash = await bcrypt.hash(req.body.password, saltRounds);
@@ -75,24 +75,30 @@ app.post("/register", async (req, res) => {
   res.redirect("/");
 });
 
-app.get('/login', (req, res) => {
+app.get("/login", (req, res) => {
   if (req.user) {
-    return res.redirect('/')
+    return res.redirect("/");
   }
-  res.render('login');
+  res.render("login");
 });
 
-app.post('/login', async (req, res) => {
+app.post("/login", async (req, res) => {
   if (req.user) {
-    return res.redirect('/')
+    return res.redirect("/");
   }
-  const maybeUser = await db.get("SELECT * FROM users WHERE username = ?;", req.body.username);
+  const maybeUser = await db.get(
+    "SELECT * FROM users WHERE username = ?;",
+    req.body.username
+  );
   if (!maybeUser) {
-    return res.render('login');
+    return res.render("login");
   }
-  const passwordMatches = await bcrypt.compare(req.body.password, maybeUser.passwordHash);
+  const passwordMatches = await bcrypt.compare(
+    req.body.password,
+    maybeUser.passwordHash
+  );
   if (!passwordMatches) {
-    return res.render('login');
+    return res.render("login");
   }
   const token = uuidv4();
   await db.run(
@@ -106,11 +112,15 @@ app.post('/login', async (req, res) => {
     expires: expirationDate,
   });
   res.redirect("/");
-})
+});
 
 app.post("/message", async (req, res) => {
   console.log(req.body);
-  await db.run("INSERT INTO messages (content) VALUES (?);", req.body.message);
+  await db.run(
+    "INSERT INTO messages (content, authorId) VALUES (?, ?);",
+    req.body.message,
+    req.user.id
+  );
   res.redirect("/");
 });
 
