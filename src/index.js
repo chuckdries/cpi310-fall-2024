@@ -88,6 +88,12 @@ app.post("/register", async (req, res) => {
   res.redirect("/");
 });
 
+app.get('/logout', async (req, res) => {
+  await db.run('DELETE FROM authTokens WHERE token = ?', req.cookies.authToken);
+  res.clearCookie('authToken');
+  res.redirect('/')
+})
+
 app.get("/login", (req, res) => {
   if (req.user) {
     return res.redirect("/");
