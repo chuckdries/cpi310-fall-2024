@@ -37,7 +37,9 @@ app.use(async (req, res, next) => {
 });
 
 app.get("/", async (req, res) => {
-  const messages = await db.all("SELECT * FROM messages;");
+  const messages = await db.all(
+    "SELECT messages.id, messages.content, users.username as author FROM messages LEFT JOIN users ON users.id = messages.authorId;"
+  );
   res.render("home", { messages, user: req.user });
 });
 
@@ -65,9 +67,11 @@ app.post("/register", async (req, res) => {
     );
   } catch (e) {
     if (e.errno === 19) {
-      return res.render("register", { error: "Username already taken"});
+      return res.render("register", { error: "Username already taken" });
     }
-    return res.render("register", { error: "Something went wrong. Try again later" })
+    return res.render("register", {
+      error: "Something went wrong. Try again later",
+    });
   }
 
   const token = uuidv4();
@@ -125,8 +129,8 @@ app.post("/login", async (req, res) => {
 
 app.post("/message", async (req, res) => {
   if (!req.user) {
-    res.status(401)
-    res.send('Unauthorized')
+    res.status(401);
+    res.send("Unauthorized");
     return;
   }
   await db.run(
