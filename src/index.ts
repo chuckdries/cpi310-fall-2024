@@ -22,6 +22,19 @@ app.use(express.urlencoded());
 app.use(cookieParser());
 app.use("/public", express.static("./public"));
 
+interface RequestUser {
+  id: number;
+  username: string;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: RequestUser;
+    }
+  }
+}
+
 app.use(async (req, res, next) => {
   const authToken = req.cookies.authToken;
   if (!authToken) {
@@ -37,7 +50,11 @@ app.use(async (req, res, next) => {
 });
 
 app.get("/", async (req, res) => {
-  const messages = await db.all(
+  const messages = await db.all<{
+    id: number;
+    content: string;
+    author: string;
+  }>(
     "SELECT messages.id, messages.content, users.username as author FROM messages LEFT JOIN users ON users.id = messages.authorId;"
   );
   res.render("home", { messages, user: req.user });
@@ -66,7 +83,7 @@ app.post("/register", async (req, res) => {
       passwordHash
     );
   } catch (e) {
-    if (e.errno === 19) {
+    if ((e as any).errno === 19) {
       return res.render("register", { error: "Username already taken" });
     }
     return res.render("register", {
@@ -88,11 +105,11 @@ app.post("/register", async (req, res) => {
   res.redirect("/");
 });
 
-app.get('/logout', async (req, res) => {
-  await db.run('DELETE FROM authTokens WHERE token = ?', req.cookies.authToken);
-  res.clearCookie('authToken');
-  res.redirect('/')
-})
+app.get("/logout", async (req, res) => {
+  await db.run("DELETE FROM authTokens WHERE token = ?", req.cookies.authToken);
+  res.clearCookie("authToken");
+  res.redirect("/");
+});
 
 app.get("/login", (req, res) => {
   if (req.user) {
