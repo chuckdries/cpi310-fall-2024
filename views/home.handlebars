@@ -1,5 +1,5 @@
 {{#if user}}
-<a href="/logout">logout</a>
+<a class="button" href="/logout">logout</a>
 {{/if}}
 
 <div>
@@ -9,11 +9,11 @@
 </div>
 
 {{#if user}}
-<form method="post" action="/message">
-  <label>Message: 
-    <input type="text" name="message" />
+<form class="form" method="post" action="/message">
+  <label class="label">Message: 
+    <input class="input"  type="text" name="message" />
   </label>
-  <button type="submit">send</button>
+  <button class="button" type="submit">send</button>
 </form>
 {{else}}
 <a href="/login">login</a>
