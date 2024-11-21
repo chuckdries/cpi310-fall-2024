@@ -60,6 +60,36 @@ app.get("/", async (req, res) => {
   res.render("home", { messages, user: req.user });
 });
 
+app.get("/message/:id/edit", async (req, res) => {
+  const message = await db.get<{
+    id: number;
+    content: string;
+    author: string;
+  }>(
+    "SELECT messages.id, messages.content, users.username as author FROM messages LEFT JOIN users ON users.id = messages.authorId WHERE messages.id = ?;",
+    req.params.id
+  );
+  console.log("🚀 ~ app.get ~ message:", message)
+  res.render("messageEdit", { message, layout: false });
+});
+
+app.put("/message/:id", async (req, res) => {
+  const result = await db.run(
+    "UPDATE messages SET content = ? WHERE id = ?;",
+    req.body.message,
+    req.params.id
+  );
+  const message = await db.get<{
+    id: number;
+    content: string;
+    author: string;
+  }>(
+    "SELECT messages.id, messages.content, users.username as author FROM messages LEFT JOIN users ON users.id = messages.authorId WHERE messages.id = ?;",
+    req.params.id
+  );
+  res.render("message", { message, layout: false })
+});
+
 app.get("/register", (req, res) => {
   if (req.user) {
     return res.redirect("/");

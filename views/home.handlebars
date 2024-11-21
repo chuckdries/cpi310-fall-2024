@@ -1,21 +1,26 @@
 {{#if user}}
-<a class="button" href="/logout">logout</a>
+  <a class="button" href="/logout">logout</a>
 {{/if}}
 
 <div>
   {{#each messages}}
-  <div>{{author}}: {{content}}</div>
+    <div class="card" hx-target="this" hx-swap="outerHTML">
+      <div class="card-content">{{author}}:
+        <p>{{content}}</p>
+        <button hx-get="/message/{{id}}/edit">edit</button>
+      </div>
+    </div>
   {{/each}}
 </div>
 
 {{#if user}}
-<form class="form" method="post" action="/message">
-  <label class="label">Message: 
-    <input class="input"  type="text" name="message" />
-  </label>
-  <button class="button" type="submit">send</button>
-</form>
+  <form class="form" method="post" action="/message">
+    <label class="label">Message:
+      <input class="input" type="text" name="message" />
+    </label>
+    <button class="button" type="submit">send</button>
+  </form>
 {{else}}
-<a href="/login">login</a>
-<a href="/register">register</a>
+  <a href="/login">login</a>
+  <a href="/register">register</a>
 {{/if}}

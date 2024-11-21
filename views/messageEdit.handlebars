@@ -1,0 +1,13 @@
+<form
+  class="card"
+  hx-put="/message/{{message.id}}"
+  hx-target="this"
+  hx-swap="outerHTML"
+>
+  <div class="card-content">
+    <label class="label">Message:
+      <input class="input" type="text" name="message" />
+    </label>
+    <button class="button" type="submit">send</button>
+  </div>
+</form>
